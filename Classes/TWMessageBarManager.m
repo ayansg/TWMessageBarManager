@@ -136,7 +136,7 @@ static UIColor *kTWDefaultMessageBarStyleSheetInfoStrokeColor = nil;
 - (TWMessageBarViewController *)messageBarViewController;
 
 // Master presetation
-- (void)showMessageWithTitle:(NSString *)title description:(NSString *)description type:(TWMessageBarMessageType)type duration:(CGFloat)duration statusBarHidden:(BOOL)statusBarHidden statusBarStyle:(UIStatusBarStyle)statusBarStyle callback:(void (^)())callback;
+- (void)showMessageWithTitle:(NSString *)title description:(NSString *)description type:(TWMessageBarMessageType)type duration:(CGFloat)duration statusBarHidden:(BOOL)statusBarHidden statusBarStyle:(UIStatusBarStyle)statusBarStyle callback:(void (^)(void))callback;
 
 @end
 
@@ -188,7 +188,7 @@ static UIColor *kTWDefaultMessageBarStyleSheetInfoStrokeColor = nil;
     [self showMessageWithTitle:title description:description type:type duration:[TWMessageBarManager durationForMessageType:type] callback:nil];
 }
 
-- (void)showMessageWithTitle:(nullable NSString *)title description:(nullable NSString *)description type:(TWMessageBarMessageType)type callback:(nullable void (^)())callback
+- (void)showMessageWithTitle:(nullable NSString *)title description:(nullable NSString *)description type:(TWMessageBarMessageType)type callback:(nullable void (^)(void))callback
 {
     [self showMessageWithTitle:title description:description type:type duration:[TWMessageBarManager durationForMessageType:type] callback:callback];
 }
@@ -198,34 +198,34 @@ static UIColor *kTWDefaultMessageBarStyleSheetInfoStrokeColor = nil;
     [self showMessageWithTitle:title description:description type:type duration:duration callback:nil];
 }
 
-- (void)showMessageWithTitle:(nullable NSString *)title description:(nullable NSString *)description type:(TWMessageBarMessageType)type duration:(CGFloat)duration callback:(nullable void (^)())callback
+- (void)showMessageWithTitle:(nullable NSString *)title description:(nullable NSString *)description type:(TWMessageBarMessageType)type duration:(CGFloat)duration callback:(nullable void (^)(void))callback
 {
     [self showMessageWithTitle:title description:description type:type duration:duration statusBarStyle:UIStatusBarStyleDefault callback:callback];
 }
 
-- (void)showMessageWithTitle:(nullable NSString *)title description:(nullable NSString *)description type:(TWMessageBarMessageType)type statusBarStyle:(UIStatusBarStyle)statusBarStyle callback:(nullable void (^)())callback
+- (void)showMessageWithTitle:(nullable NSString *)title description:(nullable NSString *)description type:(TWMessageBarMessageType)type statusBarStyle:(UIStatusBarStyle)statusBarStyle callback:(nullable void (^)(void))callback
 {
     [self showMessageWithTitle:title description:description type:type duration:kTWMessageBarManagerDisplayDelay statusBarStyle:statusBarStyle callback:callback];
 }
 
-- (void)showMessageWithTitle:(nullable NSString *)title description:(nullable NSString *)description type:(TWMessageBarMessageType)type duration:(CGFloat)duration statusBarStyle:(UIStatusBarStyle)statusBarStyle callback:(nullable void (^)())callback
+- (void)showMessageWithTitle:(nullable NSString *)title description:(nullable NSString *)description type:(TWMessageBarMessageType)type duration:(CGFloat)duration statusBarStyle:(UIStatusBarStyle)statusBarStyle callback:(nullable void (^)(void))callback
 {
     [self showMessageWithTitle:title description:description type:type duration:duration statusBarHidden:NO statusBarStyle:statusBarStyle callback:callback];
 }
 
-- (void)showMessageWithTitle:(nullable NSString *)title description:(nullable NSString *)description type:(TWMessageBarMessageType)type statusBarHidden:(BOOL)statusBarHidden callback:(nullable void (^)())callback
+- (void)showMessageWithTitle:(nullable NSString *)title description:(nullable NSString *)description type:(TWMessageBarMessageType)type statusBarHidden:(BOOL)statusBarHidden callback:(nullable void (^)(void))callback
 {
     [self showMessageWithTitle:title description:description type:type duration:[TWMessageBarManager durationForMessageType:type] statusBarHidden:statusBarHidden statusBarStyle:UIStatusBarStyleDefault callback:callback];
 }
 
-- (void)showMessageWithTitle:(nullable NSString *)title description:(nullable NSString *)description type:(TWMessageBarMessageType)type duration:(CGFloat)duration statusBarHidden:(BOOL)statusBarHidden callback:(nullable void (^)())callback
+- (void)showMessageWithTitle:(nullable NSString *)title description:(nullable NSString *)description type:(TWMessageBarMessageType)type duration:(CGFloat)duration statusBarHidden:(BOOL)statusBarHidden callback:(nullable void (^)(void))callback
 {
     [self showMessageWithTitle:title description:description type:type duration:duration statusBarHidden:statusBarHidden statusBarStyle:UIStatusBarStyleDefault callback:callback];
 }
 
 #pragma mark - Master Presentation
 
-- (void)showMessageWithTitle:(NSString *)title description:(NSString *)description type:(TWMessageBarMessageType)type duration:(CGFloat)duration statusBarHidden:(BOOL)statusBarHidden statusBarStyle:(UIStatusBarStyle)statusBarStyle callback:(void (^)())callback
+- (void)showMessageWithTitle:(NSString *)title description:(NSString *)description type:(TWMessageBarMessageType)type duration:(CGFloat)duration statusBarHidden:(BOOL)statusBarHidden statusBarStyle:(UIStatusBarStyle)statusBarStyle callback:(void (^)(void))callback
 {
     TWMessageView *messageView = [[TWMessageView alloc] initWithTitle:title description:description type:type];
     messageView.delegate = self;
@@ -356,7 +356,7 @@ static UIColor *kTWDefaultMessageBarStyleSheetInfoStrokeColor = nil;
                     id obj = [messageView.callbacks objectAtIndex:0];
                     if (![obj isEqual:[NSNull null]])
                     {
-                        ((void (^)())obj)();
+                        ((void (^)(void))obj)();
                     }
                 }
             }
@@ -384,12 +384,20 @@ static UIColor *kTWDefaultMessageBarStyleSheetInfoStrokeColor = nil;
     return [self messageBarViewController].view;
 }
 
+- (UIWindow *)keyWindow
+{
+    return [[[UIApplication sharedApplication].windows filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(id  _Nullable evaluatedObject, NSDictionary<NSString *,id> * _Nullable bindings) {
+        UIWindow* window = evaluatedObject;
+        return window.isKeyWindow;
+    }]] firstObject];
+}
+
 - (TWMessageBarViewController *)messageBarViewController
 {
     if (!self.messageWindow)
     {
         self.messageWindow = [[TWMessageWindow alloc] init];
-        self.messageWindow.frame = [UIApplication sharedApplication].keyWindow.frame;
+        self.messageWindow.frame = self.keyWindow.frame;
         self.messageWindow.hidden = NO;
         self.messageWindow.windowLevel = UIWindowLevelNormal;
         self.messageWindow.backgroundColor = [UIColor clearColor];
@@ -555,45 +563,39 @@ static UIColor *kTWDefaultMessageBarStyleSheetInfoStrokeColor = nil;
             yOffset = ceil(rect.size.height * 0.5) - ceil(titleLabelSize.height * 0.5) - kTWMessageViewTextOffset;
         }
         
-        if ([[UIDevice currentDevice] tw_isRunningiOS7OrLater])
-        {
-            NSMutableParagraphStyle *paragraphStyle = [[NSParagraphStyle defaultParagraphStyle] mutableCopy];
-            paragraphStyle.alignment = NSTextAlignmentLeft;
-            
-            [[self titleColor] set];
-            [self.titleString drawWithRect:CGRectMake(xOffset, yOffset, titleLabelSize.width, titleLabelSize.height)
-                                   options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingTruncatesLastVisibleLine
-                                attributes:@{NSFontAttributeName:[self titleFont], NSForegroundColorAttributeName:[self titleColor], NSParagraphStyleAttributeName:paragraphStyle}
-                                   context:nil];
-            
-            yOffset += titleLabelSize.height;
-            
-            [[self descriptionColor] set];
-            [self.descriptionString drawWithRect:CGRectMake(xOffset, yOffset, descriptionLabelSize.width, descriptionLabelSize.height)
-                                         options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingTruncatesLastVisibleLine
-                                      attributes:@{NSFontAttributeName:[self descriptionFont], NSForegroundColorAttributeName:[self descriptionColor], NSParagraphStyleAttributeName:paragraphStyle}
-                                         context:nil];
-        }
-        else
-        {
-            [[self titleColor] set];
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-            [self.titleString drawInRect:CGRectMake(xOffset, yOffset, titleLabelSize.width, titleLabelSize.height) withFont:[self titleFont] lineBreakMode:NSLineBreakByTruncatingTail alignment:NSTextAlignmentLeft];
-#pragma clang diagnostic pop
-            
-            yOffset += titleLabelSize.height;
-            
-            [[self descriptionColor] set];
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-            [self.descriptionString drawInRect:CGRectMake(xOffset, yOffset, descriptionLabelSize.width, descriptionLabelSize.height) withFont:[self descriptionFont] lineBreakMode:NSLineBreakByTruncatingTail alignment:NSTextAlignmentLeft];
-#pragma clang diagnostic pop
-        }
+        NSMutableParagraphStyle *paragraphStyle = [[NSParagraphStyle defaultParagraphStyle] mutableCopy];
+        paragraphStyle.alignment = NSTextAlignmentLeft;
+        
+        [[self titleColor] set];
+        [self.titleString drawWithRect:CGRectMake(xOffset, yOffset, titleLabelSize.width, titleLabelSize.height)
+                               options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingTruncatesLastVisibleLine
+                            attributes:@{NSFontAttributeName:[self titleFont], NSForegroundColorAttributeName:[self titleColor], NSParagraphStyleAttributeName:paragraphStyle}
+                               context:nil];
+        
+        yOffset += titleLabelSize.height;
+        
+        [[self descriptionColor] set];
+        [self.descriptionString drawWithRect:CGRectMake(xOffset, yOffset, descriptionLabelSize.width, descriptionLabelSize.height)
+                                     options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingTruncatesLastVisibleLine
+                                  attributes:@{NSFontAttributeName:[self descriptionFont], NSForegroundColorAttributeName:[self descriptionColor], NSParagraphStyleAttributeName:paragraphStyle}
+                                     context:nil];
     }
 }
 
 #pragma mark - Getters
+
+- (UIWindow *)keyWindow
+{
+    return [[[UIApplication sharedApplication].windows filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(id  _Nullable evaluatedObject, NSDictionary<NSString *,id> * _Nullable bindings) {
+        UIWindow* window = evaluatedObject;
+        return window.isKeyWindow;
+    }]] firstObject];
+}
+
+- (UIInterfaceOrientation)statusBarOrientation
+{
+    return self.keyWindow.windowScene.interfaceOrientation;
+}
 
 - (CGFloat)height
 {
@@ -609,7 +611,7 @@ static UIColor *kTWDefaultMessageBarStyleSheetInfoStrokeColor = nil;
 
 - (CGFloat)statusBarOffset
 {
-    return [[UIDevice currentDevice] tw_isRunningiOS7OrLater] ? [self statusBarFrame].size.height : 0.0;
+    return [self statusBarFrame].size.height;
 }
 
 - (CGFloat)availableWidth
@@ -620,23 +622,11 @@ static UIColor *kTWDefaultMessageBarStyleSheetInfoStrokeColor = nil;
 - (CGSize)titleSize
 {
     CGSize boundedSize = CGSizeMake([self availableWidth], CGFLOAT_MAX);
-    CGSize titleLabelSize;
-    
-    if ([[UIDevice currentDevice] tw_isRunningiOS7OrLater])
-    {
-        NSDictionary *titleStringAttributes = [NSDictionary dictionaryWithObject:[self titleFont] forKey: NSFontAttributeName];
-        titleLabelSize = [self.titleString boundingRectWithSize:boundedSize
-                                                        options:NSStringDrawingTruncatesLastVisibleLine | NSStringDrawingUsesLineFragmentOrigin
-                                                     attributes:titleStringAttributes
-                                                        context:nil].size;
-    }
-    else
-    {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-        titleLabelSize = [_titleString sizeWithFont:[self titleFont] constrainedToSize:boundedSize lineBreakMode:NSLineBreakByTruncatingTail];
-#pragma clang diagnostic pop
-    }
+    NSDictionary *titleStringAttributes = [NSDictionary dictionaryWithObject:[self titleFont] forKey: NSFontAttributeName];
+    CGSize titleLabelSize = [self.titleString boundingRectWithSize:boundedSize
+                                                           options:NSStringDrawingTruncatesLastVisibleLine | NSStringDrawingUsesLineFragmentOrigin
+                                                        attributes:titleStringAttributes
+                                                           context:nil].size;
     
     return CGSizeMake(ceilf(titleLabelSize.width), ceilf(titleLabelSize.height));
 }
@@ -644,31 +634,19 @@ static UIColor *kTWDefaultMessageBarStyleSheetInfoStrokeColor = nil;
 - (CGSize)descriptionSize
 {
     CGSize boundedSize = CGSizeMake([self availableWidth], CGFLOAT_MAX);
-    CGSize descriptionLabelSize;
-    
-    if ([[UIDevice currentDevice] tw_isRunningiOS7OrLater])
-    {
-        NSDictionary *descriptionStringAttributes = [NSDictionary dictionaryWithObject:[self descriptionFont] forKey: NSFontAttributeName];
-        descriptionLabelSize = [self.descriptionString boundingRectWithSize:boundedSize
-                                                                    options:NSStringDrawingTruncatesLastVisibleLine | NSStringDrawingUsesLineFragmentOrigin
-                                                                 attributes:descriptionStringAttributes
-                                                                    context:nil].size;
-    }
-    else
-    {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-        descriptionLabelSize = [_descriptionString sizeWithFont:[self descriptionFont] constrainedToSize:boundedSize lineBreakMode:NSLineBreakByTruncatingTail];
-#pragma clang diagnostic pop
-    }
+    NSDictionary *descriptionStringAttributes = [NSDictionary dictionaryWithObject:[self descriptionFont] forKey: NSFontAttributeName];
+    CGSize descriptionLabelSize = [self.descriptionString boundingRectWithSize:boundedSize
+                                                                       options:NSStringDrawingTruncatesLastVisibleLine | NSStringDrawingUsesLineFragmentOrigin
+                                                                    attributes:descriptionStringAttributes
+                                                                       context:nil].size;
     
     return CGSizeMake(ceilf(descriptionLabelSize.width), ceilf(descriptionLabelSize.height));
 }
 
 - (CGRect)statusBarFrame
 {
-    CGRect windowFrame = NSFoundationVersionNumber <= NSFoundationVersionNumber_iOS_7_1 ? [self orientFrame:[UIApplication sharedApplication].keyWindow.frame] : [UIApplication sharedApplication].keyWindow.frame;
-    CGRect statusFrame = NSFoundationVersionNumber <= NSFoundationVersionNumber_iOS_7_1 ?  [self orientFrame:[UIApplication sharedApplication].statusBarFrame] : [UIApplication sharedApplication].statusBarFrame;
+    CGRect windowFrame = self.keyWindow.frame;
+    CGRect statusFrame = self.keyWindow.windowScene.statusBarManager.statusBarFrame;
     return CGRectMake(windowFrame.origin.x, windowFrame.origin.y, windowFrame.size.width, statusFrame.size.height);
 }
 
@@ -736,6 +714,7 @@ static UIColor *kTWDefaultMessageBarStyleSheetInfoStrokeColor = nil;
 - (void)didChangeDeviceOrientation:(NSNotification *)notification
 {
     self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y, [self statusBarFrame].size.width, self.frame.size.height);
+    [self sizeToFit];
     [self setNeedsDisplay];
 }
 
@@ -846,19 +825,6 @@ static UIColor *kTWDefaultMessageBarStyleSheetInfoStrokeColor = nil;
 
 @end
 
-@implementation UIDevice (Additions)
-
-#pragma mark - OS Helpers
-
-- (BOOL)tw_isRunningiOS7OrLater
-{
-    NSString *systemVersion = self.systemVersion;
-    NSUInteger systemInt = [systemVersion intValue];
-    return systemInt >= kTWMessageViewiOS7Identifier;
-}
-
-@end
-
 @implementation TWMessageBarViewController
 
 - (UIInterfaceOrientationMask)supportedInterfaceOrientations
@@ -872,20 +838,14 @@ static UIColor *kTWDefaultMessageBarStyleSheetInfoStrokeColor = nil;
 {
     _statusBarStyle = statusBarStyle;
     
-    if ([[UIDevice currentDevice] tw_isRunningiOS7OrLater])
-    {
-        [self setNeedsStatusBarAppearanceUpdate];
-    }
+    [self setNeedsStatusBarAppearanceUpdate];
 }
 
 - (void)setStatusBarHidden:(BOOL)statusBarHidden
 {
     _statusBarHidden = statusBarHidden;
 
-    if ([[UIDevice currentDevice] tw_isRunningiOS7OrLater])
-    {
-        [self setNeedsStatusBarAppearanceUpdate];
-    }
+    [self setNeedsStatusBarAppearanceUpdate];
 }
 
 #pragma mark - Status Bar
