@@ -1,7 +1,7 @@
 # TWMessageBarManager
 
 
-**The fork updates the library API to conform to iOS13+**
+**The fork updates the library API to conform to iOS 13+. So minimum required version of your project to use the forked library is iOS 13.0. All other requirements stay the same.**
 
 ---
 
