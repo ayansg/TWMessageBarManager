@@ -1,7 +1,10 @@
 # TWMessageBarManager
 
+
 **The fork updates the library API to conform to iOS13+**
-===
+
+---
+
 An iOS manager for presenting system-wide notifications via a dropdown message bar. 
 
 <img src="https://raw.github.com/terryworona/TWMessageBarManager/master/Screenshots/main.png">
